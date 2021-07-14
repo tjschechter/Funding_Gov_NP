@@ -1,0 +1,440 @@
+---
+title: Analysis of Various Sources of Funding for Public Welfare and Benefit Expenditures
+  in the United States
+author: "Thomas Schechter, University of Oregon"
+date: "11/20/2020"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+  38.1 million was the number of people living in poverty in the United States in 2018 (US Census Bureau, 2020). That year, the federal government spent just over 2.220 trillion USD on transfer payments in the form of social benefits to individuals (U.s. Bureau of Economic Analysis). In addition to these transfer payments, nonprofit institutions in the United States contributed 1.627 trillion USD in gross output in the form of services (U.S. Bureau of Economic Analysis). This sums to 3.847 trillion USD in federal expenditures on social benefits to individuals and services provided by nonprofit institutions for the 2018 fiscal year. 
+  
+  These numbers went up in the 2019 fiscal year, with federal transfers for social benefits totaling up to nearly 2.348 trillion USD and nonprofit gross output for services counting out to just over 1.678 trillion USD (U.S. Bureau Economic Analysis). This total sum adds up to a whopping 18.836% of the United States' 21.374 trillion USD GDP for this year (World Bank) (transfer payments to not contribute towards GDP). By comparison, the United States' defense spending and investment summed to 874.7 billion USD in 2019 (U.S. Bureau of Economic Analysis), while the next closest country's spending, China, is estimated to around 261 billion USD over the same period [^1] (Duffin, 2020) [1]: This figure does not include investment. 
+ 
+  So, the U.S. defense budget and investment, while ballooned in comparison to other nations, pales next to what the U.S. government spends on transfer payments towards social benefits. Common examples of these include Social Security payments and unemployment insurance. For comparison, government expenditures, which do contribute towards GDP, accounted for 209.3 billion USD (U.S. Bureau of Economic Analysis) of the federal government's budget. 
+ 
+  Transfer payments and welfare and social service expenditures make up such a large portion of the federal budget, one has to wonder how this data has trended, how it correlates to each other, and how it will continue to behave over the course of the next decade. This article will largely examine data from the 1959 fiscal year to 2019, on an annual, end of period basis. Examination will be done with regression, graphs, and time series analysis tools. In addition to data on federal government expenditures on welfare and transfer payments, this article will analyze data on federal and state level revenue through taxation and state level expenditures, as well as data on nonprofit institutions' gross output, worth, and revenue through donations and contributions.
+  
+  
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r include=FALSE}
+setwd("C:/Users/tjsch/OneDrive/Documents/Academia/Econometrics/disc_sec/Econometrics_discsec")
+library(pacman)
+p_load(stargazer, lubridate, tidyverse, AER, broom, sandwich, janitor, ggplot2, readr, dplyr, scales, ggthemes, tseries, forecast, tinytex)
+
+gov <- read_csv("Government Revenue and Expenditures.csv")
+
+nonprofit <- read_csv("Nonprofit and Household Data.csv")
+
+```
+
+## Regression Analysis
+
+Examination of the data, retrieved from the Federal Reserve Economic Database, will begin with regression analysis. 
+
+```{r include=FALSE}
+
+reg_fed_wss <- lm(gov$soc_benefits~gov$fed_taxes+gov$soc_benefits+gov$fed_grants, data = gov)
+
+reg_defense <- lm(gov$def~gov$fed_taxes+gov$soc_benefits+gov$fed_grants, data = gov)
+
+reg_fed_educ <- lm(gov$fed_ed~gov$fed_taxes+gov$soc_benefits+gov$fed_grants, data = gov)
+
+reg_interest <- lm(gov$interest~gov$fed_taxes+gov$soc_benefits+gov$fed_grants, data=gov)
+reg_state_wss <- lm(gov$state_wss~gov$state_taxes+gov$fed_grants, data=gov)
+reg_state_ed <- lm(gov$state_ed~gov$prop_taxes+gov$fed_ed, data=gov)
+
+reg_output <- lm(nonprofit$nonprof_output~nonprofit$corp_donations+nonprofit$corp_taxes+nonprofit$deductions, data=nonprofit)
+
+reg_donations <- lm(nonprofit$corp_donations~nonprofit$corp_taxes, data=nonprofit)
+
+```
+
+```{r results='asis', echo=FALSE}
+stargazer(reg_fed_wss, reg_defense, reg_fed_educ, title="Results on Welfare/Social Services, Defense Expenditures/Investment, and Education Expenditures and Federal Tax Revenue, Controlling for Federal Grants to States and Transfer Payments for Social Benefits", align = TRUE, type = "latex", dep.var.labels =c("Welfare And Social Services", "Defense", "Education"), covariate.labels = c("Federal Tax Revenue", "Transfer Payments", "Federal Grants to States"))
+```
+In the table, it is shown that there is a strong correlation between all independent variables and the respective dependent variables. All adjusted $R^2$ values are greater than or equal to .946, meaning that when controlling for transfer payments and federal grants to states, at least 94.6% of the variance of the response variables (federal welfare/social service expenditures, defense spending, and education spending, respectively), can be explained or predicted by the federal government's tax revenue. For the latter two responses, this coefficient of determination is 96.4% and 96.5%, respectively. Controlling for federal transfer payments and grants to states to support their own welfare and social service programs allows for the regression to not suffer from omitted variable bias, and as a result, we receive a more true picture of the  adjusted correlation. The strongest correlations exist between federal tax revenue and the federal government's defense and education expenditures and investments, though we are not discounting the strength of the correlation between welfare and social service expenditures and federal tax revenue. 
+
+Interestingly, while a positive relationship is shown between welfare and social services and federal revenue from taxation, a negative relationship is shown for defense and education spending. Granted, defense spending has by far the highest initial value in our model (estimated at nearly 72 billion USD), and it also appears to increase with transfer payments, and at a quicker rate than federal grants, both showing positive coefficients. Education also sees positive relationships with these covariates, though increases at a lower rate, both coefficients being less then 1. Welfare and social services, while being the only explicit positive relation with federal tax revenue, has the lowest initial value, starting at an estimated 160 billion USD in the hole, given a tax revenue of zero, but increases at roughly half the rate of federal tax revenue. 
+
+The decision to control for transfer payments and federal grants to states was due to the fact that transfer payments make up the largest share of federal budget, while grants to states are meant to support welfare and social service expenditures by state and local governments. As a result, omitting such large payments may have induced bias, as they could also help to explain why such an amount is allocated to each response variable. 
+```{r results='asis', echo=FALSE}
+
+stargazer(reg_interest, title = "Results on Federal Interest Payments and Federal Tax Revenue, Controlling for Federal Grants to States and Transfer Payments for Social Benefits", align=TRUE, type = 'text', dep.var.labels = c("Federal Interest Payments"), covariate.labels = c("Federal Tax Revenue", "Transfer Payments", "Federal Grants to States"))
+
+```
+
+
+The regression of interest payments by the federal government on federal tax revenue, controlling again for federal transfer payments and grants to states, is another strong correlation, though not quite as strong as those shown in the previous table. The adjusted $R^2$ value of 0.920 indicates that 92% of variation in interest payments can be attributed to federal tax revenue. We control for transfers and grants for the same reason as before, as these payments result in less money being directed towards interest payments on federal debt. Interest payments accounted for over 8.5 percent of the federal budget in 2019, while transfer payments were a part of mandatory government spending that accounted for over 61 percent of all federal outlays in 2019 (CBO)
+
+
+```{r results='asis', echo=FALSE}
+
+stargazer(reg_state_wss, title="Results of State Welfare and Social Service Expenditures on State Tax Revenue and Federal Grants to States", align=TRUE, type='html', covariate.labels = c("State Tax Revenue", "Federal Grants to States"), dep.var.labels = c("State Welfare/Social Serve Expenditures"))
+
+```
+Seen in the table, when controlling for federal grants, there is a near perfect relationship between state tax revenue and expenditures on welfare and social services by states. This is also a positive relationship, as we can predict from the regression model that for every billion dollars the state takes in from tax revenue, controlling for federal grants, an estimated 11 million USD will be pumped out to recipients of welfare or social services from the state, give or take around 3 million USD (our standard error). Additionally, the response sees a positive relationship with federal grants meant to fund welfare and social programs for states, though intuitively this is not surprising.
+```{r results='asis', echo=FALSE}
+stargazer(reg_state_ed, title="Results of State Education Expenditures on Property Taxes, Controlling for Federal Education Expenditures", align = TRUE, type='html', covariate.labels = c("Property Taxes", "Federal Education Expenditures"), dep.var.labels = c("State Education Expenditures"))
+```
+In another display of a near perfect correlation, we see a positive relationship between state education expenditures and property tax revenue by state and local governments, controlling for federal education spending. The rather large coefficient in comparison to a small standard error indicates that property taxes are indeed an effective revenue source for education for state and local governments. However, this ethically may lead to problems of funding disparities in lower income communities, as the relationship is not nearly as beneficial between federal funding and state and local education spending. Should a community's education rely primarily on its property tax revenue generated, it likely would see massive funding issues and poorer educational outcomes.  
+
+While the federal data we examined previously held strong correlations already, it is interesting to see the near perfect relationships from our admittedly limited sample size from state and local government spending and its respective revenue sources. 
+```{r results='asis', echo=FALSE}
+stargazer(reg_output, title="Results of Nonprofit Institutions Gross Output for Services on Corporate Donations", align=TRUE, type="html", covariate.labels = c("Corporate Donations", "Corporate Taxes"), dep.var.labels = c("Gross Output"))
+
+```
+Moving into the private sector, we see relationships and correlation grow weaker. In the table above, the adjusted $R^2$ coefficient indicates that under 90% of nonprofit gross output for expenditures on services can be explained by corporate donors when controlling for corporate taxes and deductions by individuals for charitable donations. This is still a strong correlation, but not quite as powerful as the relationships we saw in the government models. Additionally, output seems to grow at a far higher rate than donations come in, indicating that there are other sources of revenue for nonprofits rather than private and business donations. 
+
+A negative relationship exists between corporate taxes and output, indicating that perhaps corporations would be more open to donating more of their profits to nonprofit institutions if they received lower taxes, though we will see shortly that this may not be the case.
+```{r results='asis', echo=FALSE}
+stargazer(reg_donations, title="Results of Corporate Donations on Corporate Taxation", align=TRUE, type='html', dep.var.labels = c("Corporate Donations"), covariate.labels = c("Corporate Taxes"))
+
+```
+As stated previously, it may not be the case that lower corporate taxes lead to higher donations by businesses to nonprofit institutions. The weakest correlation we have seen so far exists in the table above, and interestingly, the relationship between corporate taxes and donations appears to be positive. One possible explanation is that by donating to private nonprofit institutes, the firms are able to write this off on their taxes, and by increasing taxes on these corporations, the incentive is created to donate. 
+
+```{r results='asis', echo=FALSE}
+total_data <- cbind(gov, nonprofit, by="DATE")
+reg_taxes_deducts <- lm(total_data$fed_taxes~total_data$deductions, data=total_data)
+
+
+```
+
+```{r results='asis', echo=FALSE}
+stargazer(reg_taxes_deducts, title="Results of Tax Deductions for Charitable Donations on Federal Tax Revenue", type='html', align=TRUE, covariate.labels = c("Federal Tax Revenue"), dep.var.labels = c("Deductions"))
+
+```
+Looking at the relationship between tax deductions for charitable donations and federal tax revenue, we see a similar phenomenon to the relationship between corporate donations to nonprofits and corporate taxes: a large, positive relationship. It can be inferred that this is a result of the tax incentive to donate to nonprofit institutions or in some way charitably contribute. However, the relationships between these are not as strong as the relationships between federal and state/local government revenue and their respective expenditures on various projects, such as transfer payments for social benefits or education. As such, it can be inferred that the government will be more reliably funded and more likely to carry out on these expenditures and payments, whereas nonprofits cannot rely on the good will of the public or corporations in order to carry out their services, or at least not as much as the government is able to rely on their sources of revenue. Mandatory taxation seems more likely to generate funds for those in need than charitable donations or contributions, which are incentivized by taxation policies. 
+
+## Plots
+
+To continue the analysis of the data, we will look at several time series over a sequence of 7 graphs, covering much of the same data that was gone over in the regression analysis. 
+
+```{r echo=FALSE}
+ggplot() + 
+  geom_line(data=gov, aes(gov$DATE, gov$fed_taxes, color="Federal Tax Revenue"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$soc_benefits, color="Transfer Payments for Social Benefits"),group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$fed_grants,color="Federal Grants to States"), group=1)+
+  geom_line(data=gov, aes(gov$DATE, gov$fed_wss, color="Welfare and Social Service Expenditures"),group=1)+
+  theme(axis.text.x = element_blank(), legend.position = "right", axis.ticks.x = element_blank()) +
+  scale_color_discrete(name="LEGEND")+
+  ggtitle("Taxes, Transfers, Grants, and Welfare/Social Services... (1)")+
+  xlab("1959 to 2019")+
+  ylab("Billions, USD") 
+```
+
+The first graph displays lines covering that data on federal tax revenue, federal government transfer payments for social benefits, and federal grants to states for welfare and social services, as well as federal expenditures for those same services. Notice the troughs and plateaus in each respective line. At the end of the time series, it can be seen that transfer payments from the federal government to social benefits programs exceed the revenue from federal taxation. In fact, even when federal tax revenue troughs, which indicates the 2008-2010 recession, transfer payments for these programs rise, only plateauing once revenue from taxation recovers to pre-recession levels in 2011-2012. This, intuitively, makes sense. Many businesses go under, many individuals default on their mortgages and go bankrupt, and many are taxed less on earnings due to losing their job. As a result of these circumstances, millions more individuals found themselves in need of financial assistance from the government than previously seen before the financial crisis. 
+
+Alongside the transfer payments increase during the recession period, federal expenditures on welfare and social services rise as well. Again, with high unemployment and bankruptcy, more and more individuals will find themselves looking for help from public sources. Federal grants to states for these services continue to increase until 2011, when they begin to trough, until recovering and reaching 2010 levels again in 2016. 
+
+```{r echo=FALSE}
+
+ggplot() +
+  geom_line(data=gov, aes(gov$DATE, gov$fed_taxes, color="Federal Tax Revenue"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$soc_benefits, color="Transfer Payments for Social Benefits"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$fed_grants,color="Federal Grants to States"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$def, color="Defense Expenditures and Investment"), group=1) +
+  theme(axis.text.x = element_blank(), legend.position = "right", axis.ticks.x = element_blank()) +
+  scale_color_discrete(name="LEGEND") +
+  ggtitle("Replacing Welfare/Social Services with Defense Spending... (2)")+
+  xlab("1959 to 2019")+
+  ylab("Billions, USD")
+
+```
+Removing federal welfare and social service expenditures and adding defense expenditures and investments, we see a general steady rise in defense spending through the cold war before a trough in the 1990's. Following the new millenium, however, there is a sharp increase in defense spending and investment, primarily due to the 9/11 attacks and the Middle East conflicts. Following the turn of the decade into the 2010's, there is a new trough before a sharp rise once again in the late 2010's. The peak of defense spending in 2010, interestingly, follows the Great Recession and sharp decrease in federal tax revenue. The merits of this spending can be debated, given the ongoing conflicts in the Middle East, but that will not be covered in this analysis. The rollbacks could be attributed to the pulling out of large numbers of troops by the Obama Administration, as well as reactions to the increased spending due to stimulus packages to pull the economy out of the Great Recession. 
+
+Referring back to our regression analysis, defense spending is negatively correlated with federal tax revenue, and the reaction to a sharp drop in tax revenue, logically, would be a drop in military/defense spending, which is what we see here. This would also explain how a period existed in the 90's of a massive increase in federal tax revenue during the .com boom accompanied by a drop and subsequent plateauing of defense spending.  
+
+
+
+
+```{r echo=FALSE}
+ggplot() +
+  geom_line(data=gov, aes(gov$DATE, gov$fed_taxes, color="Federal Tax Revenue"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$soc_benefits, color="Transfer Payments for Social Benefits"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$fed_grants,color="Federal Grants to States"), group=1) + 
+  geom_line(data=gov, aes(gov$DATE, gov$fed_ed, color = "Federal Education Expenditures"), group=1) +
+  theme(axis.text.x = element_blank(), legend.position = "right", axis.ticks.x = element_blank()) +
+  scale_color_discrete(name="LEGEND") +
+  ggtitle("Now Replacing Defense with Education Spending... (3)")+
+  xlab("1959 to 2019")+
+  ylab("Billions, USD")
+
+```
+
+Now replacing defense spending with federal education expenditures, we see another behavior that follows from the regression analysis of the previous section. Nearly every year in our data, from 1959, until 2007 sees a relatively moderate increase in federal education spending, typically several billion USD in total. However, following a slight decrease in 2007 and a typical increase in 2008, education spending by the federal government booms in 2009, jumping by over nearly 30 billion USD. This concurs with the model from the regression analysis of federal education expenditures on federal tax revenue, as the spike in spending occurs almost concurrently with the drop in tax revenue. In the next graph, it will be shown that not all government expenditures displayed this behavior, though the regression models will continue to be shown to be consistent.   
+
+```{r echo=FALSE}
+ggplot() +
+  geom_line(data=gov, aes(gov$DATE, gov$fed_taxes, color="Federal Tax Revenue"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$soc_benefits, color="Transfer Payments for Social Benefits"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$fed_grants,color="Federal Grants to States"), group=1) + 
+  geom_line(data=gov, aes(gov$DATE, gov$interest, color = "Federal Interest Payments"), group=1) +
+  theme(axis.text.x = element_blank(), legend.position = "right", axis.ticks.x = element_blank()) +
+  scale_color_discrete(name="LEGEND") +
+  ggtitle("Now Replacing Education with Federal Interest Payments...(4)")+
+  xlab("1959 to 2019")+
+  ylab("Billions, USD")
+```
+
+Following the regression models again, we see that interest payments, which were modeled to have a positive relationship with federal tax revenue, follow the latter line's trends consistently throughout the above graph. Interest payments also follow the regression model in that they seems to have a negative relationship with transfer payments, troughing oftentimes as the transfer payments appear to rise significantly. A look at the data corroborates these claims, with interest payments falling in the 90's while transfers for social benefit programs continued to increase. 
+
+```{r echo=FALSE, warning=FALSE}
+ggplot() +
+  geom_line(data=gov, aes(gov$DATE, gov$state_taxes, color="State Tax Revenue"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$state_wss, color="State Welfare and Social Service Expenditures"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$prop_taxes, color="Property Tax Revenue"), group=1) +
+  geom_line(data=gov, aes(gov$DATE, gov$state_ed, color="State Education Expenditures"), group=1)+
+  geom_line(data=gov, aes(gov$DATE, gov$fed_grants,color="Federal Grants to States"), group=1)+
+  theme(axis.text.x = element_blank(), legend.position = "right", axis.ticks.x = element_blank()) +
+  scale_color_discrete(name="LEGEND") +
+  ggtitle("And onto State Data... (5)")+
+  xlab("1959 to 2019")+
+  ylab("Billions, USD")
+```
+
+Moving on to the state and local government data, from a visual standpoint, the data seems to agree with the regression models. The state education expenditures follow the trend of the property tax revenue, reaching inflection points in the same period. State welfare and social service expenditures exhibit the same phenomenon. At initial glance, the federal grants and social service and welfare data run almost parallel lines. Intuitively, this makes sense. The grants are going to exactly what they are meant to be going towards. The troughs all appear to occur together, during the recession of the late 2000's. This would corroborate the stronger correlations seen in the state revenue and expenditure models compared to the federal counterparts.
+
+```{r echo=FALSE, warning=FALSE}
+ggplot() +
+  geom_line(data=nonprofit, aes(nonprofit$DATE, nonprofit$corp_donations, color="Corporate Donations to Nonprofits"), group=1)+
+  geom_line(data=nonprofit, aes(nonprofit$DATE, nonprofit$corp_taxes, color = "Corporate Taxes"), group=1) +
+  geom_line(data=nonprofit, aes(nonprofit$DATE, nonprofit$deductions, color="Tax Deduction for Charitable Contributions"), group=1) +
+  theme(axis.text.x = element_blank(), legend.position = "right", axis.ticks.x = element_blank()) +
+  ggtitle("Moving on to Nonprofit Data... (6)") +
+  scale_color_discrete(name="LEGEND") +
+  xlab("1959 to 2019")+
+  ylab("Billions, USD")
+```
+
+To begin our nonprofit data graphical analysis, we see consistent behavior between our models in our regression analysis and our graphical lines of the given time series data with respect to corporate donations on taxation. A positive correlation exists between the two data series, which is shown to a lesser degree in the graph above. The peaks and troughs in corporate taxation are much more noticeable in the graph above due to the more extreme nature of them, but the respective movements are also discernable in the donations line. This is consistent with the positive relationship we see in the regression model, though the disparities in the graph can be attributed to the weaker correlation between the variables. 
+
+
+```{r echo=FALSE, warning=FALSE}
+ggplot() +
+  geom_line(data=nonprofit, aes(nonprofit$DATE, nonprofit$corp_donations, color="Corporate Donations to Nonprofits"), group=1)+
+  geom_line(data=nonprofit, aes(nonprofit$DATE, nonprofit$nonprof_output, color="Nonprofit Institutions, Gross Output for Services"),group=1) +
+  geom_line(data=nonprofit, aes(nonprofit$DATE, nonprofit$corp_taxes, color = "Corporate Taxes"), group=1) +
+  geom_line(data=nonprofit, aes(nonprofit$DATE, nonprofit$deductions, color="Tax Deduction for Charitable Contributions"), group=1) +
+  theme(axis.text.x = element_blank(), legend.position = "right", axis.ticks.x = element_blank()) +
+  ggtitle("And adding in Gross Output of Nonprofit Services. (7)") +
+  scale_color_discrete(name="LEGEND") +
+  xlab("1959 to 2019")+
+  ylab("Billions, USD")
+
+```
+
+In the final graph of the analysis, we continue to see the visualization of the relationships from the regression models, notably the weakness of the nonprofit correlations compared to the government data. As corporate taxation and donations continue to peak and trough, as well as individual deductions for charitable contributions, the gross output of expenditures for services by nonprofit institutions continues to rapidly increase. Additionally, it becomes clear that such donations and contributions are not reliable sources of funding for nonprofit institutions as they continue to produce at their current rate. 
+
+In 2009, corporate tax revenue is cleaved by over half, dropping from 296 billion USD to 127 billion USD. In the same period, corporate donations to nonprofit institutes, as well as tax deductions for charitable donations, see a significant decrease. Despite this, gross output by nonprofit institutions for service expenditures continues to increase at a range of 40 to 60 billion USD a year, topping 1 trillion USD for the first time in 2007, just before the recession. 
+ 
+---
+## Autocorrelation and Cross-Correlation
+
+For final analysis, autocorrelation and cross-correlation functions will be run on the data to examine the consistency of the time series data. Lag will be set to 17 years for autocorrelation functions for the purposes of this analysis, and 15 years for cross-correlation functions, as correlation begins to drop significantly after this point.
+
+```{r echo=FALSE}
+ts_fed_taxes <- ts(gov$fed_taxes, start=c(1959), end=c(2019), frequency = 1)
+ts_def<- ts(gov$def, start=c(1959), end=c(2019), frequency = 1)
+ts_grants <- ts(gov$fed_grants, start=c(1959), end=c(2019), frequency = 1)
+ts_fed_ed <- ts(gov$fed_ed, start=c(1959), end=c(2019), frequency = 1)
+ts_fed_Wss <- ts(gov$fed_wss, start=c(1959), end=c(2019), frequency = 1)
+ts_interest <- ts(gov$interest, start=c(1959), end=c(2019), frequency = 1)
+ts_soc_ben <- ts(gov$soc_benefits, start=c(1959), end=c(2019), frequency = 1)
+ts_state_wss <- ts(gov$state_wss, start=c(1959), end=c(2019), frequency = 1)
+ts_state_taxes <- ts(gov$state_taxes, start=c(1959), end=c(2019), frequency = 1)
+ts_prop_taxes <- ts(gov$prop_taxes, start=c(1959), end=c(2017), frequency = 1)
+ts_state_ed <- ts(gov$state_ed, start=c(1959), end=c(2019), frequency = 1)
+
+ts_nonprof_output <- ts(nonprofit$nonprof_output, start=c(1959), end=c(2019), frequency = 1)
+ts_corp_taxes <- ts(nonprofit$corp_taxes, start=c(1959), end=c(2019), frequency = 1)
+ts_donations <- ts(nonprofit$corp_donations, start=c(1959), end=c(2016), frequency = 1)
+ts_net_worth <- ts(nonprofit$net_worth, start=c(1959), end=c(2019), frequency = 1)
+
+acf_fed_taxes <- acf(ts_fed_taxes, plot=TRUE, main="Federal Tax Revenue, Autocorrelation")
+
+acf_soc_ben <- acf(ts_soc_ben, plot=TRUE, main="Transfer Payments for Social Benefits, Autocorrelation")
+
+ccf_soc_ben_taxes <- ccf(ts_fed_taxes, ts_soc_ben, plot = TRUE, main="Federal Tax Revenue and Transfer Payments for Social Benefits")
+
+
+```
+
+From the autocorrelation graphs, there are visible trends up to $x_{t-14}$ and $x_{t-15}$ for the respective charts. After this point, the correlation with the current data becomes insignificant. In the cross-correlation graph between federal tax revenue and transfer payments for social benefits, we similar behavior, with stronger correlation as the lag approaches $x_{t-15}$ than when it approaches $x_{t+15}$. This behavior leads us to believe that a federal tax revenue leads the behavior of the transfer payments, meaning that the former can be used to predict the latter.
+
+```{r echo=FALSE}
+
+acf_fed_wss <- acf(ts_fed_Wss, plot=TRUE, main="Federal Expenditures on Welfare/Social Services")
+
+
+ccf_fed_wss_taxes <- ccf(ts_fed_taxes, ts_fed_Wss, plot=TRUE, main="Federal Tax Revenue and Welfare/Social Service Expenditures")
+
+
+```
+
+Similar to the previous graphs, the autocorrelation graph for welfare and social service expenditures indicate a strong upward trend, with moderate to strong correlation within the last 15 years of data. The cross-correlation between this time series and the federal tax revenue time series show correlation is slightly stronger to the left, indicating again that federal tax revenue can be used to predict values of welfare and social service expenditures. Will this be a consistent behavior throughout our correlation analysis? Let's find out:
+
+```{r echo=FALSE}
+acf_def <- acf(ts_def, plot=TRUE, main="Defense Expenditures and Investment, Autocorrelation")
+
+
+ccf_fed_taxes_def <- ccf(ts_fed_taxes, ts_def, plot=TRUE, main="Defense Spending and Tax Revenue")
+
+                        
+```
+
+The autocorrelation on the defense spending time series indicates that the correlation is stronger between current defense spending and more recent data, as there is a sharper drop off than in the above graphs. The cross correlation between defense and federal tax revenue show correlation is stronger on the right, indicating that defense spending may be leading tax revenue data, though the correlations are fairly even around $x_{t-15}$ and $x_{t+15}$, 
+
+```{r echo=FALSE}
+acf_fed_ed <- acf(ts_fed_ed, plot=TRUE, main="Autocorrelation on Education Expenditures")
+
+
+ccf_fed_taxes_ed <- ccf(ts_fed_taxes, ts_fed_ed, plot=TRUE, main="Federal Tax Revenue and Education Expenditures")
+
+```
+
+The autocorrelation function graph on education spending exhibits similar behaviors to the defense spending graph, with stronger relationships between more recent data. This could be explained by the sharp uptick in education spending we saw in graph (3) of the previous section, which immediately followed the Great Recession. This indicates a consistency in our data.
+
+The cross-correlation graph, however, shows a large skew to the left in our correlations, indicating the tax revenue is in fact a good indicator for education spending in following periods. One possible interpretation of this and the previous graph is that defense spending is prioritized over education, as tax revenue seems to be a stronger predictor of education spending than it is of defense spending. This could mean that defense spending is already set before tax revenue is collected, and therefore could help shape tax rates and policies. 
+
+```{r echo=FALSE} 
+acf_interest <- acf(ts_interest, plot=TRUE, main="Autocorrelation on Federal Interest Payments")
+
+
+ccf_taxes_interest <- ccf(ts_fed_taxes, ts_interest, plot=TRUE, main="Federal Tax Revenue and Interest Payments")
+
+```
+
+On first glance, we notice a striking difference in this cross-correlation function: there is a massive skew to the right in correlation. The interpretation of this is that interest payments are a strong predictor for federal tax revenue. This would make sense, as interest payments, though not lumped in with mandatory spending in the federal budget, are payments the U.S. government has to make due to its surging debt. As such, as interest payments rise, it would seem that tax revenue would have to rise with it, and the positive relationship seen in the regression analysis may be misguided, and interest payments should be set as the explanatory variable in a regression model with federal tax revenue. Defense spending, which experiences the same phenomenon, should also be set as an explanatory variable for tax revenue in that regression model. 
+
+```{r echo=FALSE}
+acf_state_taxes <- acf(ts_state_taxes, plot=TRUE, main="State Tax Revenue, Autocorrelation")
+
+
+acf_state_wss <- acf(ts_state_wss, plot=TRUE, main="State Welfare and Social Services Expenditures")
+
+
+ccf_state_taxes_wss <- ccf(ts_state_taxes, ts_state_wss, plot=TRUE, main="State Tax Revenue and Welfare/Social Services Expenditures")
+
+```
+
+Once more we see stronger correlations to the right side of our cross-correlation graph, with state welfare and social services expenditures leading the state and local government tax revenue. There may, however, be some bias present, as we assessed there was strong positive relationship between these expenditures and federal grants to states meant to fund these expenditures. This was seen in both the regression and graphical analysis above. 
+
+```{r echo=FALSE}
+acf_fed_grants <- acf(ts_grants, plot=TRUE, main="Federal Grants to States")
+
+
+ccf_grants_wss <- ccf(ts_grants, ts_state_wss, lag.max = 20, plot=TRUE, main="Federal Grants on State Welfare/Social Services")
+
+ccf_grants_wss
+
+```
+
+There exists a nearly even balance across both sides of our cross-correlation. A decision was made to set the lag boundaries to $x_{t-20}$ and $x_{t+20}$, as the correlation remained significant at the usual bounds of $x_{t-15}$ and $x_{t+15}$. As such, we cannot infer which variable is a determinant of the other without risk of error, though we can maintain from our previous analysis that their relationship is strong and positive. 
+
+Since we cannot infer from the graph which variable leads which, we will examine the correlation values from each lagged value. We can see that, in general, there is a slight stronger correlation as the graph approaches $x_{t+20}$, so we can hazard a guess that welfare and social services expenditures are a predictor of federal grants to states for such expenditures. This makes sense, as if there is a rise in such expenditures one year, it can be inferred that grants to state and local governments to fund such expenditures will necessarily rise the following year.
+
+```{r echo=FALSE}
+acf_prop_tax <- acf(ts_prop_taxes, plot=TRUE, main="Property Tax Revenue")
+
+
+acf_state_ed <- acf(ts_state_ed, plot=TRUE, main="State Education Expenditures")
+
+ccf_prop_ed <- ccf(ts_prop_taxes, ts_state_ed, plot=TRUE, main="State Education Expenditures and Property Tax Revenue")
+
+```
+
+Similar to the previous cross-correlation graph on welfare and social services and federal grants to states, the graph of the cross-correlation between property tax revenue and state education expenditures is ambiguous as to which correlation is stronger. Once again we will pull out our values for the correlation directly. 
+
+```{r echo=FALSE}
+ccf_prop_ed
+```
+
+Following from our regression analysis, there is almost a perfect correlation for the $x_t$ period. As the lags increase, there is a slightly stronger correlation to indicate that education spending determines the property tax revenue variable. This could be a result of bias, as federal education spending also contributes towards state and local education expenditures. 
+
+```{r echo=FALSE}
+ccf_ed_ed <- ccf(ts_fed_ed, ts_state_ed, plot=TRUE, main="Federal and State Education Expenditures")
+ccf_ed_ed
+
+```
+
+Interestingly, the same phenomenon exists in the cross-correlation graph for the time series of federal and state/local education spending. Thinking about this, it does seem logical that federal spending on education would rise after an increase in state/local spending, as federal spending helps to fund the state and local level education expenditures in surplus of property tax revenue. As such, an increase in local and state level spending would necessitate an increase in spending at the federal level, to keep up with the needs of the states.
+
+```{r echo=FALSE}
+acf_output <- acf(ts_nonprof_output, plot=TRUE, main="Nonprofit Gross Output for Expenditures on Services")
+
+acf_corp_don <- acf(ts_donations, plot=TRUE, main="Corporate Donations to Nonprofit Institutions")
+
+acf_corp_taxes <- acf(ts_corp_taxes, plot=TRUE, main="Corporate Tax Revenue")
+
+acf_corp_taxes
+```
+
+With the analysis moving to private sector nonprofit institutional data, we see typical autocorrelation function graphs for the gross output of service expenditures for nonprofits and the donations by corporations to nonprofits, but a notable stagnation of the decline in correlation along the lags for corporate taxation, with only a 1.4% drop between $x_{t-5}$ and $x_{t-7}$. Inferences from the data are difficult, as this period lines up with a period of increasing taxation on corporations, while in recent years tax revenue from this source has dropped significantly. This anomaly will be noted as we move on to our final cross-correlation function graphs.
+
+```{r echo=FALSE}
+ccf_output_don <- ccf(ts_donations, ts_nonprof_output, plot=TRUE, main="Nonprofit Gross Output and Corporate Donations")
+
+
+ccf_taxes_don <- ccf(ts_corp_taxes, ts_donations, plot=TRUE, main="Corporate Donations and Tax Revenue")
+```
+
+In the final graphs of this section, it is visible that the cross-correlation function graph for corporate donations to nonprofit institutions and gross output from nonprofit institutions indicates that donations lead output. This is a logical result, as donations help to fund nonprofit services and expenditures, but as shown in our graphical analysis, nonprofits appear to rely on funding from other sources in order to fund their output expenditures for services. When looking at the graph on corporate tax revenue and corporate donations, we see the same phenomenon as in corporate tax revenue's autocorrelation function graph: a period of plateauing in correlation drop across several lag periods. Despite this, it appears that corporate donations end up becoming a predictor of corporate tax revenue, which is understandable, given that corporations will be able to write off such donations in order to pay less in taxes, and also will have less in taxable liquid or monetary assets as a result of carrying out said donations. 
+
+## Conclusion
+
+Through regression analysis, graphical displays, and autocorrelation and cross-correlation visual and data analysis, we see a general theme appear. It seems that there are weaknesses in the relationship between nonprofit institutions and funds from individual and corporate donors. Nonprofit institutions cannot be reliant on corporate donors for their funding, and individual tax deductions do not appear to be large enough to make up for that lack of funding. Thus, nonprofit institutions are likely forced to look elsewhere for their funding in order to provide services for those who need them at the rate their gross output is growing. 
+
+The United States federal government also seems to rely on other sources of funding than purely tax revenue. This article did not explore those other avenues, though that may be a topic for future research. Federal tax revenue in recent years has been exceeded by the growing amount of transfer payments for social benefits, a deficit compounded with defense expenditures and investment, interest payments, welfare and social service expenditures, and to a lesser extent, education expenditures. 
+
+State and local governments, on the other hand, appear to be much more capable of running its social programs and expenditures from their tax revenue. This paper, again, did not cover every expenditure or form of spending through which states operate (some other interesting forms of spending that would require looking into include infrastructure, agriculture and manufacturing subsidies, and prison systems, among many others). 
+
+The relationships found from the regression analysis were either corroborated by the graphical and correlation analysis or were contradicted in ways that should make sense when thought about carefully (e.g. how interest payments have a positive relationship with federal tax revenue, but the former appears to predict the latter from the results of the cross-correlation function). 
+
+Once again, research in this area leaves much open to question and it would be impossible to include every factor in this paper without it becoming a short book. However, I do hope this has given the reader some insight into how funding for different sources of relief or societal benefits for the American people is related to the expenditures and investment spent on those programs. 
+
+## Works Cited
+
+Board of Governors of the Federal Reserve System (US), Households and Nonprofit Organizations; Net Worth, Level [TNWBSHNO], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/TNWBSHNO, November 20, 2020.
+
+Duffin, E. (2020, May 11). Ranking: Military spending by country 2019. Retrieved November 21, 2020, from https://www.statista.com/statistics/262742/countries-with-the-highest-military-spending/
+
+U.S. Bureau of Economic Analysis, Business current transfer payments (net): Payments to persons (net): Donations by corporate business to nonprofit institutions serving households [B1873C1A027NBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/B1873C1A027NBEA, November 20, 2020.
+
+U.S. Bureau of Economic Analysis, Federal government current expenditures: Interest payments [A091RC1Q027SBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/A091RC1Q027SBEA, November 19, 2020.
+
+U.S. Bureau of Economic Analysis, Federal government current tax receipts [W006RC1Q027SBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/W006RC1Q027SBEA, November 19, 2020.
+
+U.S. Bureau of Economic Analysis, Federal government current tax receipts: Taxes on corporate income [B075RC1Q027SBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/B075RC1Q027SBEA, November 19, 2020.
+
+U.S. Bureau of Economic Analysis, Federal government current transfer payments: Government social benefits: to persons [B087RC1Q027SBEA], retrieved from FRED, Federal Reserve Bank of St. Louis;
+https://fred.stlouisfed.org/series/B087RC1Q027SBEA, November 20, 2020.
+
+U.S. Bureau of Economic Analysis, Federal Government: National Defense Consumption Expenditures and Gross Investment [FDEFX], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/FDEFX, November 19, 2020.
+
+U.S. Bureau of Economic Analysis, Federal grants-in-aid to state and local governments: Income security: Welfare and social services [G170731A027NBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/G170731A027NBEA, November 19, 2020.
+
+U.S. Bureau of Economic Analysis, Government current expenditures: Federal: Education [G160681A027NBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/G160681A027NBEA, November 19, 2020.
+
+U.S. Bureau of Economic Analysis, Government current expenditures: Federal: Income security: Welfare and social services [G160751A027NBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/G160751A027NBEA, November 20, 2020.
+
+U.S. Bureau of Economic Analysis, Government current expenditures: State and local: Education [G161071A027NBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/G161071A027NBEA, November 19, 2020.
+
+U.S. Bureau of Economic Analysis, Government current expenditures: State and local: Income security: Welfare and social services [G161141A027NBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/G161141A027NBEA, November 19, 2020
+
+U.S. Bureau of Economic Analysis, Personal consumption expenditures: Services: Gross output of nonprofit institutions [DNPERC1Q027SBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/DNPERC1Q027SBEA, November 20, 2020.
+
+U.S. Bureau of Economic Analysis, State and local government current tax receipts [W070RC1Q027SBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/W070RC1Q027SBEA, November 19, 2020.
+
+U.S. Bureau of Economic Analysis, State and local government current tax receipts: Taxes on production and imports: Property taxes [B249RC1Q027SBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/B249RC1Q027SBEA, November 19, 2020.
+
+US Census Bureau. (2020, June 26). Income and Poverty in the United States: 2018. Retrieved November 20, 2020, from https://www.census.gov/library/publications/2019/demo/p60-266.html
+
+U.S. Department of the Treasury. Internal Revenue Service, Individual Income Tax Filing: Itemized Deductions: Charitable Contributions [IMZDCTCA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/IMZDCTCA, November 20, 2020.
+
+World Bank. (n.d.). GDP (current US$) - United States. Retrieved November 21, 2020, from https://data.worldbank.org/indicator/NY.GDP.MKTP.CD?locations=US
